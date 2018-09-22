@@ -108,10 +108,10 @@ def gini(rows):
 ## TODO: Step 3
 def entropy(rows):
     counts = class_counts(rows)
-    impurity=0
+    impurity = 0
     for lbl in counts:
         prob_of_lbl = counts[lbl] / float(len(rows))
-        impurity = -prob_of_lbl*math.log(prob_of_lbl,2)
+        impurity += (-(prob_of_lbl*math.log(prob_of_lbl,2)))
     return impurity
 
 
@@ -132,7 +132,7 @@ def find_best_split(rows, header):
     and calculating the information gain."""
     best_gain = 0  # keep track of the best information gain
     best_question = None  # keep train of the feature / value that produced it
-    current_uncertainty = gini(rows)
+    current_uncertainty = entropy(rows)
     n_features = len(rows[0]) - 1  # number of columns
 
     for col in range(n_features):  # for each feature
@@ -170,14 +170,14 @@ class Leaf:
     it appears in the rows from the training data that reach this leaf.
     """
 
-    def __init__(self, rows, id, depth, class_label):
+    def __init__(self, rows, id, depth):
         self.predictions = class_counts(rows)
         self.depth = depth
         self.id = id
         self.rows = rows
 
-        class_label = [key for m in [max(self.predictions.values())] for key,val in self.predictions.items() if val == m]
-        self.class_label = class_label
+        self.class_label = [key for m in [max(self.predictions.values())] for key,val in self.predictions.items() if val == m]
+        # self.class_label = class_label
         #print(class_label)
         #for key in self.predictions.items():
             #print(key)
@@ -213,6 +213,7 @@ class Decision_Node:
         self.false_branch = false_branch
         self.rows = rows
         self.depth = depth
+        self.id = id
 
 
 
@@ -238,7 +239,7 @@ def build_tree(rows, header, depth=0, id=0):
     # Since we can ask no further questions,
     # we'll return a leaf.
     if gain == 0:
-        return Leaf(rows, id, depth, rows)
+        return Leaf(rows, id, depth)
 
     # If we reach here, we have found a useful feature / value
     # to partition on.
@@ -308,7 +309,8 @@ def print_tree(node, spacing=""):
 
     # Base case: we've reached a leaf
     if isinstance(node, Leaf):
-        print (spacing + "Predict", node.predictions)
+        print (spacing + "Predict", node.class_label)
+        print("Leaf Id", node.id)
         return
 
     # Print the question at this node
@@ -316,6 +318,8 @@ def print_tree(node, spacing=""):
 
     # Call this function recursively on the true branch
     print (spacing + '--> True:')
+    #print("Depth", node.depth)
+    #print("Node Id",node.id)
     print_tree(node.true_branch, spacing + "  ")
 
     # Call this function recursively on the false branch
@@ -339,11 +343,12 @@ def getLeafNodes(node, leafNodes =[]):
 
     # Returns a list of all leaf nodes of a tree
     if isinstance(node, Leaf):
-        leafNodes.append(node.predictions)
-        return
+        leafNodes.append(node)
 
-    getLeafNodes(node.true_branch, leafNodes)
-    getLeafNodes(node.false_branch, leafNodes)
+    else:
+
+        getLeafNodes(node.true_branch, leafNodes)
+        getLeafNodes(node.false_branch, leafNodes)
 
     return leafNodes
 
@@ -353,8 +358,8 @@ def getInnerNodes(node, inner_nodes =[]):
     if isinstance(node, Leaf):
         return
 
-    inner_nodes.append(node.true_branch)
-    inner_nodes.append(node.false_branch)
+    inner_nodes.append(node)
+    #inner_nodes.append(node)
     #inner_Nodes = getInnerNodes(node.true_branch, innerNodes)
     getInnerNodes(node.true_branch, inner_nodes)
     getInnerNodes(node.false_branch, inner_nodes)
@@ -376,7 +381,5 @@ def computeAccuracy(rows, node):
         for label in predicted_label:
             if label == true_label:
                 Accuracy = Accuracy + 1
-                continue
-
 
     return round(Accuracy/totalRows, 2)
